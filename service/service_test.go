@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -11,20 +12,31 @@ import (
 	"github.com/mhdiiilham/oauth2-auth-server-implementation/pkg/jwt"
 	authpb "github.com/mhdiiilham/oauth2-auth-server-implementation/protos"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson"
 	"google.golang.org/grpc/codes"
 )
+
+func init() {
+	client, coll, mongoErr := mongodb.NewMongoDBConnection(os.Getenv("MONGO_DB_USER"), os.Getenv("MONGO_DB_PASS"), os.Getenv("MONGO_DB"), os.Getenv("MONGO_DB_COLLECTION"))
+	if mongoErr != nil {
+		panic(mongoErr)
+	}
+	defer client.Disconnect(context.TODO())
+
+	coll.DeleteMany(context.TODO(), bson.M{"email": "Testing@mail.com"})
+}
 
 func TestRegisterNewUser(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name    string
 		code    codes.Code
-		payload *authpb.ResgisterRequest
+		payload *authpb.RegisterRequest
 	}{
 		{
 			name: "Success registering new user",
 			code: codes.OK,
-			payload: &authpb.ResgisterRequest{
+			payload: &authpb.RegisterRequest{
 				Fullname: "User Testing",
 				Email:    "Testing@mail.com",
 				Password: "PasswordTest.com",
@@ -33,7 +45,16 @@ func TestRegisterNewUser(t *testing.T) {
 		{
 			name:    "Failed registering new user",
 			code:    codes.InvalidArgument,
-			payload: &authpb.ResgisterRequest{},
+			payload: &authpb.RegisterRequest{},
+		},
+		{
+			name: "Failed registering new user when email already registered",
+			code: codes.AlreadyExists,
+			payload: &authpb.RegisterRequest{
+				Fullname: "User Testing Duplicate Email",
+				Email:    "Testing@mail.com",
+				Password: "DuplicatePassword.com",
+			},
 		},
 	}
 
@@ -50,7 +71,7 @@ func TestRegisterNewUser(t *testing.T) {
 			userManager := user.NewManager(userRepo)
 			authServer := NewService(os.Getenv("SERVER_NETWORK"), os.Getenv("SERVER_ADDRESS"), userManager, tokenService)
 
-			res, err := authServer.RegisterService(context.TODO(), &authpb.ResgisterRequest{
+			res, err := authServer.RegisterService(context.TODO(), &authpb.RegisterRequest{
 				Fullname: tc.payload.GetFullname(),
 				Email:    tc.payload.GetEmail(),
 				Password: tc.payload.GetPassword(),
@@ -61,6 +82,7 @@ func TestRegisterNewUser(t *testing.T) {
 				assert.NotNil(t, res.GetAccessToken(), "Access token should not be empty")
 				assert.Equal(t, res.GetMessage(), "Register success", "Message should be equal to 'Register Success'")
 			} else {
+				fmt.Println("Error ->", err.Error())
 				assert.NotNil(t, err, "Error should be not nil")
 				assert.Nil(t, res, "Response should be nil")
 			}

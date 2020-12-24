@@ -7,14 +7,14 @@ option go_package = "./protos;authpb";
 service AuthorizationService {
     // return INVALID_ARGUMENT if fullname, email, or/and password is empty
     // return ALREADY_EXIST if email already registered
-    rpc RegisterService (ResgisterRequest) returns (ResgisterResponse) {};
+    rpc RegisterService (RegisterRequest) returns (RegisterResponse) {};
 
     // return INVALID_ARGUMENT if payloads are empty
     // return UNAUTHENTICATED if email & password combination does not match
     rpc LoginService(LoginRequest) returns (LoginResponse) {};
 }
 
-message ResgisterRequest {
+message RegisterRequest {
     string fullname = 1;
     string email = 2;
     string password = 3;
@@ -25,7 +25,7 @@ message LoginRequest {
     string password = 2;
 }
 
-message ResgisterResponse {
+message RegisterResponse {
     string message = 1;
     string access_token = 2;
 }
