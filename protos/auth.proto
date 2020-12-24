@@ -2,18 +2,36 @@ syntax = "proto3";
 
 package auth;
 
-option go_package = "authpb";
+option go_package = "./protos;authpb";
 
 service AuthorizationService {
-    rpc LoginService (LoginRequest) returns (LoginResponse) {};
+    // return INVALID_ARGUMENT if fullname, email, or/and password is empty
+    // return ALREADY_EXIST if email already registered
+    rpc RegisterService (ResgisterRequest) returns (ResgisterResponse) {};
+
+    // return INVALID_ARGUMENT if payloads are empty
+    // return UNAUTHENTICATED if email & password combination does not match
+    rpc LoginService(LoginRequest) returns (LoginResponse) {};
+}
+
+message ResgisterRequest {
+    string fullname = 1;
+    string email = 2;
+    string password = 3;
 }
 
 message LoginRequest {
-    string username = 1;
+    string email = 1;
     string password = 2;
+}
+
+message ResgisterResponse {
+    string message = 1;
+    string access_token = 2;
 }
 
 message LoginResponse {
     string message = 1;
     string access_token = 2;
+    string token_type = 3;
 }
